@@ -2,7 +2,7 @@
 
 > **Layer 4** of the spec. Defines the mechanisms that let consumers trust components they did not author.
 
-A prompt library people copy-paste from is tactical; a prompt library people *depend on* requires trust. Trust means: I can tell what a component does before running it, I can verify it performs as claimed, I know it is from who it claims to be from, and I know whether it will keep working when I upgrade.
+A prompt library people copy-paste from is tactical; a prompt library people *depend on* requires trust. Trust means: I can tell what a component does before running it, I can verify it performs as claimed, I know it's from who it claims to be from, and I know whether it will keep working when I upgrade.
 
 This part defines five mechanisms:
 
@@ -12,44 +12,57 @@ This part defines five mechanisms:
 4. **Deprecation** — graceful evolution (§4.5)
 5. **Provenance** — signing and origin verification (§4.6)
 
-Plus the error format and trace format that cut across all layers (§4.7, §4.8).
+Plus the error and trace formats that cut across all layers (§4.7, §4.8).
 
-## 4.1 The lockfile
+## 4.1 Lockfile and distribution
 
-Before the mechanisms: a foundational concept. Any project that consumes components produces a **lockfile** that pins exact resolved versions and content hashes of every component in its dependency graph.
+Reproducibility requires pinning exact resolved versions of every component in a dependency graph. Two patterns are supported:
+
+### 4.1.1 APM-managed projects
+
+When a project uses [APM](https://microsoft.github.io/apm/) for distribution, APM's `apm.lock.yaml` is authoritative. It pins every dependency to a 40-character git commit SHA. Pbib runtimes MUST defer to `apm.lock.yaml` for version pinning when it is present.
+
+This is the recommended path. APM handles:
+
+- Git-based dependency resolution
+- Transitive dependency traversal
+- Content hashing (via commit SHA)
+- Supply-chain scanning (`apm audit`)
+- Multi-tool deployment (`.claude/`, `.github/`, `.cursor/`, etc.)
+
+Pbib's job when APM is present: read components from the locations APM deployed them, validate their structure, and render them. We do not re-pin what APM has already pinned.
+
+### 4.1.2 Non-APM projects
+
+When a project does not use APM, pbib runtimes MAY maintain a native lockfile:
 
 ```yaml
-# promptbib.lock
+# pbib.lock.yaml
 lockfileVersion: 1
 components:
   "cod.review.security":
     version: 1.0.0
     integrity: "sha256-abc123..."
-    resolved: "https://promptbib.org/cod.review.security/1.0.0"
+    source: "https://github.com/acme/prompts/blob/abc123/review/security.md"
     dependencies:
       "cod.review.base": "1.0.0"
       "met.p.reviewer-voice": "1.0.0"
-      "met.p.format-json-findings": "1.0.0"
-  "cod.review.base":
-    version: 1.0.0
-    integrity: "sha256-def456..."
-    ...
 ```
 
-The lockfile guarantees reproducibility: a rendered prompt at time T is reproducible at time T+N as long as the lockfile is unchanged. This is the same guarantee `package-lock.json` provides for npm.
+The native lockfile provides the same guarantee APM does: a rendered prompt at time T is reproducible at time T+N as long as the lockfile is unchanged.
 
-Runtimes MUST produce a lockfile when resolving dependencies. Runtimes MUST verify content hashes on every load. Mismatches MUST abort rather than warn — silent tampering defeats the purpose.
+Runtimes MUST verify content hashes on every load when a lockfile is present. Mismatches MUST abort rather than warn — silent tampering defeats the purpose.
 
 ## 4.2 Versioning
 
-Every component declares a `version` conforming to [Semantic Versioning 2.0.0](https://semver.org). The spec specializes semver for LLM artifacts.
+Every Level 1+ component declares a `version` under `metadata.pbib.version` conforming to [Semantic Versioning 2.0.0](https://semver.org). The spec specializes semver for LLM artifacts.
 
 ### 4.2.1 What counts as a breaking change
 
 A **major version bump** (X.0.0) is REQUIRED when:
 
 - Removing or renaming an input, slot, or output field.
-- Narrowing an output schema (making it reject previously-valid outputs).
+- Tightening an output schema in a way that rejects previously-valid outputs.
 - Widening an input type in a way that breaks downstream consumers (new enum values, looser validation).
 - Changing the body in a way that produces observably different model output on the component's eval suite.
 - Removing a tag that was previously relied upon for discovery.
@@ -89,25 +102,29 @@ Components reference dependencies with semver ranges:
 - `1.0.0` — exact version
 - `>=1.0.0 <2.0.0` — explicit range
 
-Runtimes MUST resolve to the highest version satisfying the constraint. The lockfile pins the resolved version.
+When APM is the distribution tool, these ranges are resolved to specific git SHAs at `apm install` time. In pure pbib resolution, ranges resolve to the highest matching published version.
 
 ## 4.3 Compatibility metadata
 
-Components declare which models and runtimes they work with. This is informational but critical — applying a Claude-tuned component to a small open model often produces degraded results, and consumers deserve to know.
+Components declare which models and runtimes they work with under `metadata.pbib.runtime_compatibility`. This is informational but critical — applying a Claude-tuned component to a small open model often produces degraded results.
+
+Note: the Agent Skills spec has its own top-level `compatibility` field (a free-form string, max 500 chars). Our structured compatibility lives under `metadata.pbib.runtime_compatibility` to avoid collision.
 
 ```yaml
-compatibility:
-  tested_models:
-    - claude-opus-4-7
-    - claude-sonnet-4-6
-  compatible_models:
-    - "claude-*"
-    - "gpt-4*"
-  incompatible_models:
-    - "gpt-3.5-*"
-  min_context: 8000
-  style: xml_structured
-  runtime_profile: core
+metadata:
+  pbib:
+    runtime_compatibility:
+      tested_models:
+        - claude-opus-4-7
+        - claude-sonnet-4-6
+      compatible_models:
+        - "claude-*"
+        - "gpt-4*"
+      incompatible_models:
+        - "gpt-3.5-*"
+      min_context: 8000
+      style: xml_structured
+      profile: core
 ```
 
 ### 4.3.1 Fields
@@ -118,8 +135,8 @@ compatibility:
 | `compatible_models` | Models the author believes the component works with. Glob patterns permitted. |
 | `incompatible_models` | Models the author has determined the component does not work with. |
 | `min_context` | Minimum model context window size, in tokens. |
-| `style` | Informational. Describes the prompt body style. Values: `xml_structured`, `markdown_sections`, `plain_prose`, or any custom string. |
-| `runtime_profile` | `core` or `agent`. See [Part 5](05-profiles.md). |
+| `style` | Informational. Values: `xml_structured`, `markdown_sections`, `plain_prose`, or any custom string. |
+| `profile` | `core` or `agent`. See [Part 5](05-profiles.md). |
 
 ### 4.3.2 Resolution semantics
 
@@ -133,7 +150,13 @@ Runtimes MUST NOT refuse to execute on compatibility mismatches — compatibilit
 
 ### 4.3.3 Compatibility under extension
 
-When a component extends another, the effective compatibility is the intersection of parent and child `compatible_models`, and the maximum of `min_context` values. A child cannot widen compatibility beyond what its parent supports.
+When a component extends another, the effective compatibility is:
+
+- `compatible_models`: intersection of parent and child.
+- `tested_models`: child's set only.
+- `min_context`: maximum of parent and child.
+
+A child cannot widen compatibility beyond what its parent supports.
 
 ## 4.4 Evals
 
@@ -141,18 +164,20 @@ An eval is a reproducible test of a component's behavior. Evals are what make ve
 
 ### 4.4.1 Eval attachment
 
-A component MAY declare evals in its front matter:
+A component MAY declare evals under `metadata.pbib.evals`:
 
 ```yaml
-evals:
-  - suite: cod.review.security.evals@^1.0.0
-    profile: standard
-  - file: ./evals/security-review.yaml
+metadata:
+  pbib:
+    evals:
+      - suite: cod.review.security.evals@^1.0.0
+        profile: standard
+      - file: ./evals/security-review.yaml
 ```
 
 Evals MAY be:
 
-- **Referenced by handle** — another component of kind `eval_suite` (a proposed future kind).
+- **Referenced by handle** — another component of a future `eval_suite` kind.
 - **Referenced by file path** — a file co-located with the component.
 
 ### 4.4.2 Eval suite structure
@@ -202,7 +227,7 @@ A registry that hosts components SHOULD also host eval results per `(component, 
 }
 ```
 
-This is what lets a consumer check, before adopting: "what does this component actually do, measured against what?"
+This lets a consumer check, before adopting: "what does this component actually do, measured against what?"
 
 ### 4.4.4 Evals and semver
 
@@ -213,53 +238,53 @@ From §4.2.4: every minor/patch release MUST pass all evals the previous version
 Components are deprecated before removal. A deprecated component continues to resolve but emits a warning at resolution time.
 
 ```yaml
-deprecated:
-  since: 1.5.0
-  reason: "Superseded by cod.review.security-v2 which supports structured CWE output"
-  replacement: cod.review.security-v2@^1.0.0
-  removal_planned: 2.0.0
+metadata:
+  pbib:
+    deprecated:
+      since: 1.5.0
+      reason: "Superseded by cod.review.security-v2 with structured CWE output"
+      replacement: cod.review.security-v2@^1.0.0
+      removal_planned: 2.0.0
 ```
 
 ### 4.5.1 Deprecation rules
 
 - Deprecation MUST NOT happen in a patch release.
 - A component SHOULD remain resolvable for at least one major version after deprecation.
-- Removal happens by publishing no new versions and eventually un-publishing old versions after a deprecation period specified by the registry.
+- Removal happens by publishing no new versions and eventually unpublishing old versions after a registry-defined deprecation period.
 
 ### 4.5.2 Replacement semantics
 
-When `replacement` is specified, automated migration tools MAY suggest the replacement to consumers. The spec does not mandate automatic substitution — replacement is advisory.
+When `replacement` is specified, automated migration tools MAY suggest the replacement to consumers. The spec does not mandate automatic substitution.
 
 ## 4.6 Provenance
 
 Provenance is the chain of evidence connecting a component to its author. Without provenance, a component's claims (author identity, eval results, tested models) are assertions that cannot be verified.
 
-### 4.6.1 Signing
+### 4.6.1 APM-based provenance
 
-A published component MAY be accompanied by a signature over its file content.
+When distributed via APM, provenance is handled by git itself: the commit SHA is a cryptographic hash of the content, signed git tags provide author verification, and `apm audit` scans for content-level threats (hidden Unicode, prompt injection).
 
-**Recommended formats** (to be finalized before 1.0):
+For most projects, APM's provenance model is sufficient and pbib needs to add nothing.
+
+### 4.6.2 Direct-distribution provenance
+
+For components distributed outside APM (downloaded directly, installed from custom registries), additional signing MAY be used:
 
 - [Sigstore](https://www.sigstore.dev/) for public registries.
-- SSH signatures (git-native) for git-based registries.
+- SSH signatures for git-based registries.
 - Minisign for minimal-infrastructure deployments.
 
-This is an **open question** — the spec does not yet commit to a single mechanism. See [README](README.md).
-
-### 4.6.2 Signature verification
-
-Runtimes SHOULD verify signatures on components obtained from registries they do not fully control. Signature verification failures MUST be treated as integrity failures equivalent to lockfile hash mismatches.
+The spec does not commit to a single mechanism. This is an **open question** for the community. See [README](../README.md).
 
 ### 4.6.3 Supply-chain constraints
 
-Because components can include other components transitively (§3.7), a malicious dependency can inject content into the final rendered prompt. Defenses:
+Because components can include other components transitively, a malicious dependency can inject content into the final rendered prompt. Defenses:
 
-- **Lockfile hashes** (§4.1) prevent silent mutation post-install.
-- **Scoped handles** (§1.4.3) prevent typosquatting to a degree.
+- **Lockfile hashes** (APM's `apm.lock.yaml` or pbib's native lockfile) prevent silent mutation post-install.
+- **Scoped handles** prevent typosquatting to a degree.
 - **Explicit transitive visibility** — runtimes SHOULD surface the full set of components that will be rendered, not just direct dependencies.
-- **Optional `--no-transitive` install mode** — a consumer MAY require every transitively-included component to be explicitly listed in their project manifest. Slow but safer.
-
-These are recommendations, not requirements — the spec cannot mandate security practice. But it structures the information in ways that makes such practice possible.
+- **APM audit integration** — when APM is present, pbib runtimes SHOULD surface `apm audit` findings alongside their own validation errors.
 
 ## 4.7 Error format
 
@@ -271,7 +296,7 @@ error:
   message: "Input 'language' has invalid value 'java'"
   component: cod.review.security
   version: 1.0.0
-  path: inputs.language
+  path: metadata.pbib.inputs.language
   details:
     received: java
     allowed: [python, typescript, go, rust]
@@ -317,16 +342,16 @@ trace:
   output_validation: passed
 ```
 
-Traces are what enable drift tracking, debugging across versions, and the eval-tied validation claims this spec rests on. Without traces, the trust claims in this part are assertions without evidence.
+Traces enable drift tracking, debugging across versions, and the eval-tied validation claims this spec rests on. Without traces, the trust claims are assertions without evidence.
 
 ## 4.9 Summary
 
 Trust in this system is the product of several mechanisms working together:
 
 - **Semver + evals** mean version numbers are behavioral claims, not decorative.
-- **Lockfiles + content hashes** mean resolution is reproducible and tamper-evident.
+- **Lockfiles (APM or native) + content hashes** mean resolution is reproducible and tamper-evident.
 - **Compatibility metadata** means consumers can predict whether a component will work for them.
-- **Provenance** (when implemented) means authorship claims are verifiable.
+- **Provenance** (via APM's git-based model or optional signing) means authorship claims are verifiable.
 - **Traces** mean runtime behavior is auditable after the fact.
 
 Any of these alone is insufficient. Together, they let a consumer reasonably trust a component they did not author — which is what separates this spec from a shared folder of markdown files.

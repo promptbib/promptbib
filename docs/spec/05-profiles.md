@@ -4,10 +4,10 @@
 
 The spec supports use cases ranging from static prompt libraries to dynamic coding agents. These have different performance, context, and capability requirements. To avoid a single bloated standard, the spec defines two conformance profiles:
 
-- **Core profile** — static composition, offline resolution, file-based registries.
-- **Agent profile** — strict superset of core, adding dynamic context, streaming inputs, tools, and skills.
+- **Core profile** — static composition, offline resolution.
+- **Agent profile** — strict superset of core, adds dynamic context, tools, and skills.
 
-Every component declares which profile it targets via `compatibility.runtime_profile`. Every runtime declares which profiles it supports. A runtime MUST NOT execute a component targeting a profile it does not implement.
+Components declare their target profile via `metadata.pbib.runtime_compatibility.profile`. Runtimes declare which profiles they support. A runtime MUST NOT execute a component targeting a profile it does not implement.
 
 ## 5.1 Core profile
 
@@ -15,7 +15,7 @@ Every component declares which profile it targets via `compatibility.runtime_pro
 
 Core profile covers:
 
-- Applications with known, bounded prompt needs.
+- Applications with bounded prompt needs.
 - Prompt libraries for teams and organizations.
 - Chat interfaces with curated prompt catalogs.
 - Batch-processing systems and pipelines.
@@ -24,22 +24,22 @@ Core profile covers:
 
 A core-profile runtime MUST support:
 
-- `token_bundle` (Part 2 §2.3)
-- `primitive` (§2.4)
-- `pattern` (§2.5)
-- `task` (§2.6)
-- `workflow` (§2.7)
-- `skin` (§2.8)
+- `token_bundle` ([Part 2 §2.4](02-kinds.md))
+- `primitive` (§2.5)
+- `pattern` (§2.6)
+- `task` (§2.7)
+- `workflow` (§2.8)
+- `skin` (§2.9)
 
 ### 5.1.3 Required mechanisms
 
 A core-profile runtime MUST implement:
 
-- Full file format parsing (Part 1).
-- All composition mechanisms (Part 3 §§3.2–3.7).
+- Full file format parsing ([Part 1](01-format.md)).
+- All composition mechanisms ([Part 3 §§3.2–3.7](03-composition.md)).
 - The resolution algorithm (§3.8).
-- Input, slot, and output validation (§3.2.4, §3.3, §3.5.3).
-- Lockfile production and verification (Part 4 §4.1).
+- Input, slot, and output validation.
+- Lockfile verification (either APM's `apm.lock.yaml` or pbib's native lockfile) ([Part 4 §4.1](04-trust.md)).
 - Semver resolution (§4.2.5).
 - Error format (§4.7).
 
@@ -57,7 +57,6 @@ A core-profile runtime MAY omit:
 - Tool schema handling.
 - Skill trigger matching.
 - Streaming input support.
-- Runtime cache invalidation policies beyond lockfile hash checks.
 
 ## 5.2 Agent profile
 
@@ -65,7 +64,7 @@ A core-profile runtime MAY omit:
 
 Agent profile covers:
 
-- Coding agents (Claude Code, Cursor, continue.dev, internal agent platforms).
+- Coding agents (Claude Code, Cursor, continue.dev, Codex CLI, internal agent platforms).
 - Research agents with tool access.
 - Multi-turn systems with evolving context.
 - Any consumer that composes prompts with runtime-gathered context.
@@ -80,21 +79,23 @@ The reverse does not hold: an agent-profile component MAY fail on a core-profile
 
 An agent-profile runtime MUST support:
 
-- `skill` (§2.9)
-- `tool` (§2.10)
+- `skill` ([Part 2 §2.10](02-kinds.md))
+- `tool` (§2.11)
 
 ### 5.2.4 Additional input types
 
 An agent-profile runtime MUST support the `context_window` input type:
 
 ```yaml
-inputs:
-  codebase:
-    type: context_window
-    priority: high
-    max_tokens: 20000
-    truncation: smart
-    required: false
+metadata:
+  pbib:
+    inputs:
+      codebase:
+        type: context_window
+        priority: high
+        max_tokens: 20000
+        truncation: smart
+        required: false
 ```
 
 #### 5.2.4.1 `context_window` specification
@@ -103,7 +104,7 @@ inputs:
 |-------|-------------|
 | `priority` | `low`, `medium`, `high`. Guides truncation order under context pressure. |
 | `max_tokens` | Soft limit for this input. Runtime may truncate to fit. |
-| `truncation` | Strategy: `head` (drop from beginning), `tail` (drop from end), `smart` (implementation-defined, e.g., drop middle). |
+| `truncation` | Strategy: `head`, `tail`, or `smart` (implementation-defined). |
 | `streaming` | Boolean. Whether the input arrives incrementally. Default `false`. |
 
 When multiple `context_window` inputs compete for budget, the runtime MUST truncate in ascending priority order. Ties are broken by declaration order.
@@ -113,29 +114,35 @@ When multiple `context_window` inputs compete for budget, the runtime MUST trunc
 An agent-profile runtime MUST resolve the `tools:` field of skills and tasks:
 
 ```yaml
-tools:
-  - met.tool.web-search@^1.0.0
-  - met.tool.file-io@^1.0.0
+metadata:
+  pbib:
+    tools:
+      - met.tool.web-search@^1.0.0
+      - met.tool.file-io@^1.0.0
 ```
 
-Tool resolution makes the tool schemas available to the model alongside the component's prompt text. Implementation details (how the tool is advertised to the model, how invocations are handled) are runtime-specific.
+Tool resolution makes the tool schemas available to the model alongside the component's prompt text. Implementation details are runtime-specific.
+
+When a component also declares Agent Skills' top-level `allowed-tools`, the runtime MUST intersect the two lists: a tool must appear in both `allowed-tools` (permission) and `metadata.pbib.tools` (availability) to be usable.
 
 ### 5.2.6 Skill triggers
 
-An agent-profile runtime MUST match skill triggers against runtime state (user message, file types present, keywords, etc.) and load matching skills on demand:
+An agent-profile runtime MUST match skill triggers against runtime state (user message, file types, keywords) and load matching skills on demand:
 
 ```yaml
-triggers:
-  - keywords: [word, docx, document]
-  - file_types: [.docx]
-  - context_match: "user is asking to create a file"
+metadata:
+  pbib:
+    triggers:
+      - keywords: [word, docx, document]
+      - file_types: [.docx]
+      - context_match: "user is asking to create a file"
 ```
 
-Trigger matching is runtime-specific. The spec defines only the declaration format; different runtimes MAY implement different matching strategies.
+Trigger matching is runtime-specific. The spec defines only the declaration format.
 
 ### 5.2.7 Caching requirements
 
-An agent-profile runtime MUST implement caching of the resolution algorithm's steps 1–6 (Part 3 §3.8). Agents invoke components at high frequency; full resolution per invocation is not viable.
+An agent-profile runtime MUST implement caching of resolution algorithm steps 1–6 ([Part 3 §3.8](03-composition.md)). Agents invoke components at high frequency; full resolution per invocation is not viable.
 
 The cache MUST be keyed by `(handle, version, input_fills_hash, slot_fills_hash)` at minimum. Cache invalidation MUST respect lockfile changes.
 
@@ -144,18 +151,13 @@ The cache MUST be keyed by `(handle, version, input_fills_hash, slot_fills_hash)
 ### 5.3.1 In components
 
 ```yaml
-compatibility:
-  runtime_profile: core
+metadata:
+  pbib:
+    runtime_compatibility:
+      profile: core    # or: agent
 ```
 
-or
-
-```yaml
-compatibility:
-  runtime_profile: agent
-```
-
-If omitted, the runtime MUST infer from the component's declared `kind`:
+If omitted, the runtime MUST infer from the component's `kind`:
 
 - `skill` or `tool` → agent profile.
 - Components using `context_window` inputs → agent profile.
@@ -165,38 +167,18 @@ Explicit declaration is RECOMMENDED.
 
 ### 5.3.2 In runtimes
 
-A runtime documents its conformance by declaring supported profiles:
+A runtime documents its conformance by declaring supported profiles. Format is convention-only; specific runtimes may use their own metadata shapes.
 
-```yaml
-# Runtime capability advertisement
-runtime: promptbib-js
-version: 0.3.0
-supports_profiles: [core]
-spec_versions: [0.1.0]
-```
-
-This is a convention for tooling (package managers, registries) to filter components by target runtime. The format itself is informational.
-
-## 5.4 Profile evolution
-
-As the spec matures, additional profiles may be defined. Anticipated profiles, not yet specified:
-
-- **Minimal profile** — file format only, no composition. For the smallest possible embedding, like static site generators.
-- **Distributed profile** — adds multi-agent coordination, shared state, inter-agent handoff contracts. For agent-to-agent systems.
-
-These are speculative and are not part of this spec version.
-
-## 5.5 Profile compatibility summary
+## 5.4 Profile compatibility summary
 
 | Runtime supports | Can execute components targeting |
 |------------------|----------------------------------|
 | core only | core only |
 | agent | core, agent |
-| core + minimal (future) | core, minimal |
 
-The core profile is the stable floor. Agent profile is today's primary extension. Future profiles MUST NOT break core-profile semantics for components that target core.
+Core profile is the stable floor. Agent profile is today's primary extension. Future profiles MUST NOT break core-profile semantics for components targeting core.
 
-## 5.6 Open question
+## 5.5 Open question
 
 Whether agent profile should become its own specification document once the feature set stabilizes. The case for splitting: agent-profile concerns (truncation strategies, caching semantics, trigger matching) are substantial enough to warrant separate treatment and evolution. The case against: a single spec reduces fragmentation and keeps the profile distinction concrete.
 
