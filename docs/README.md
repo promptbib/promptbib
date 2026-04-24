@@ -55,12 +55,12 @@ See [Part 1 §1.2](spec/01-format.md) for details.
 
 The spec is organized into four layers:
 
-| Layer | What it defines | Part |
-|-------|----------------|------|
-| 1. File format | How a single component is written on disk | [Part 1](spec/01-format.md) |
-| 2. Semantic model | Component kinds and what each can do | [Part 2](spec/02-kinds.md) |
-| 3. Composition | How components reference, extend, and combine | [Part 3](spec/03-composition.md) |
-| 4. Trust and verification | Evals, compatibility, provenance | [Part 4](spec/04-trust.md) |
+| Layer                     | What it defines                               | Part                             |
+|---------------------------|-----------------------------------------------|----------------------------------|
+| 1. File format            | How a single component is written on disk     | [Part 1](spec/01-format.md)      |
+| 2. Semantic model         | Component kinds and what each can do          | [Part 2](spec/02-kinds.md)       |
+| 3. Composition            | How components reference, extend, and combine | [Part 3](spec/03-composition.md) |
+| 4. Trust and verification | Evals, compatibility, provenance              | [Part 4](spec/04-trust.md)       |
 
 [Part 5: Profiles](spec/05-profiles.md) defines conformance levels (core, agent) for runtimes.
 
@@ -118,6 +118,16 @@ tags: [security, code, review]
 ```
 
 Same file. Works in Claude Code, Codex CLI, OpenCode at Level 0. Works in pbib-aware runtimes at Level 2. No conversion, no export step.
+
+## The runtime's role
+
+A pbib runtime is a library or service that parses components, resolves composition, validates inputs and outputs, and produces rendered prompt text. Runtimes are invoked by consumers — typically agents, but also applications, pipelines, or CI systems.
+
+- At Level 0, a runtime is optional; the component file is directly usable as a prompt.
+- At Level 1, a runtime is optional but adds addressability and version verification.
+- At Level 2, a runtime is required to resolve composition features. Without one, the body contains unresolved template markers.
+
+A consumer may embed a runtime as a library, call it as a service, or skip it entirely and use components at Level 0.
 
 ## Conformance
 
