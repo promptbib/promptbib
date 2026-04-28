@@ -6,43 +6,46 @@ A pattern is a structural template with slots that specializations fill. Pattern
 
 ```yaml
 ---
-handle: cod.review.base
-version: 1.0.0
-kind: pattern
-spec: 0.1.0
+name: review-base
 description: Base structure for code review tasks. Specializations fill the focus slot.
-inputs:
-  code:
-    type: string
-    required: true
-    description: The source code to review
-  language:
-    type: enum[python, typescript, go, rust, java]
-    required: true
-slots:
-  persona:
-    type: component_ref
-    allowed_kinds: [primitive]
-    required: true
-    description: Which reviewer persona to adopt
-  focus:
-    type: markdown
-    required: true
-    description: What to look for in this review
-  format:
-    type: component_ref
-    allowed_kinds: [primitive]
-    required: true
-    description: How output should be structured
-  guards:
-    type: list[component_ref]
-    allowed_kinds: [primitive]
-    default: []
-    description: Optional constraint primitives to include
-compatibility:
-  tested_models: [claude-opus-4-7, claude-sonnet-4-6]
-  compatible_models: ["claude-*", "gpt-4*"]
-  style: xml_structured
+license: MIT
+metadata:
+  pbib:
+    version: 1.0.0
+    kind: pattern
+    handle: cod.review.base
+    inputs:
+      code:
+        type: string
+        required: true
+        description: The source code to review
+      language:
+        type: enum[python, typescript, go, rust, java]
+        required: true
+    slots:
+      persona:
+        type: component_ref
+        allowed_kinds: [primitive]
+        required: true
+        description: Which reviewer persona to adopt
+      focus:
+        type: markdown
+        required: true
+        description: What to look for in this review
+      format:
+        type: component_ref
+        allowed_kinds: [primitive]
+        required: true
+        description: How output should be structured
+      guards:
+        type: list[component_ref]
+        allowed_kinds: [primitive]
+        default: []
+        description: Optional constraint primitives to include
+    runtime_compatibility:
+      tested_models: [claude-opus-4-7, claude-sonnet-4-6]
+      compatible_models: ["claude-*", "gpt-4*"]
+      style: xml_structured
 tags: [code, review, pattern]
 ---
 {{slot: persona}}
@@ -71,7 +74,7 @@ tags: [code, review, pattern]
 
 **`allowed_kinds: [primitive]`.** This is the spec preventing authors from installing arbitrary content into structural slots. You cannot fill `persona` with a 500-word inline blob because the slot type rejects it at validation time.
 
-**`compatibility.style: xml_structured`.** Informational. The pattern uses XML tags (`<review_focus>`, `<code>`) because the author tested it on Claude and decided XML structure helps. A registry or linter can use this to warn consumers whose target models prefer a different style.
+**`runtime_compatibility.style: xml_structured`.** Informational. The pattern uses XML tags (`<review_focus>`, `<code>`) because the author tested it on Claude and decided XML structure helps. A registry or linter can use this to warn consumers whose target models prefer a different style.
 
 **Body.** Static structure with four slot references. The body is the pattern — what varies is what fills the slots.
 
@@ -98,7 +101,7 @@ What counts as a breaking change?
 - **Minor (1.1.0):** Adding an optional slot with a default. Adding a new enum value to `language`. Adding a new compatible model.
 - **Patch (1.0.1):** Fixing a typo in the description. Updating tags.
 
-A body change (e.g., restructuring the XML tags) is major if it changes output shape, minor if the eval suite still passes. See Part 4 §4.2 for the eval backstop rule.
+A body change (e.g., restructuring the XML tags) is major if it changes output shape, minor if the meaning is preserved. The author is responsible for honoring this distinction; consumers can pin exact versions or read changelogs to protect themselves.
 
 ## What this demonstrates
 

@@ -1,22 +1,23 @@
-# Part 4: Trust and verification
+# Part 4: Trust and provenance
 
 > **Layer 4** of the spec. Defines the mechanisms that let consumers trust components they did not author.
 
-A prompt library people copy-paste from is tactical; a prompt library people *depend on* requires trust. Trust means: I can tell what a component does before running it, I can verify it performs as claimed, I know it's from who it claims to be from, and I know whether it will keep working when I upgrade.
+A prompt library people copy-paste from is tactical; a prompt library people *depend on* requires trust. Trust here means: I can tell what a component does before running it, I know it's from who it claims to be from, and I know whether it will keep working when I upgrade.
 
-This part defines five mechanisms:
+This part defines four mechanisms:
 
 1. **Versioning** — semver adapted for LLM artifacts (§4.2)
 2. **Compatibility metadata** — model and runtime applicability (§4.3)
-3. **Evals** — behavioral tests attached to components (§4.4)
-4. **Deprecation** — graceful evolution (§4.5)
-5. **Provenance** — signing and origin verification (§4.6)
+3. **Deprecation** — graceful evolution (§4.4)
+4. **Provenance** — origin verification (§4.5)
 
-Plus the error and trace formats that cut across all layers (§4.7, §4.8).
+Plus the error and trace formats that cut across all layers (§4.6, §4.7).
+
+**Out of scope:** Behavioral testing of components — verifying that a component produces the outputs it claims — is not defined by this spec. Authors choose their own approach (Promptfoo, OpenAI Evals, Anthropic's tools, custom scripts, manual review). The spec defines what a component *is* and how it composes, not how to test it.
 
 ## 4.1 Lockfile and distribution
 
-Reproducibility requires pinning exact resolved versions of every component in a dependency graph. Two patterns are supported:
+Reproducibility requires pinning exact resolved versions of every component in a dependency graph. Two patterns are supported.
 
 ### 4.1.1 APM-managed projects
 
@@ -64,7 +65,7 @@ A **major version bump** (X.0.0) is REQUIRED when:
 - Removing or renaming an input, slot, or output field.
 - Tightening an output schema in a way that rejects previously-valid outputs.
 - Widening an input type in a way that breaks downstream consumers (new enum values, looser validation).
-- Changing the body in a way that produces observably different model output on the component's eval suite.
+- Changing the body in a way that produces materially different model output.
 - Removing a tag that was previously relied upon for discovery.
 
 ### 4.2.2 What counts as a minor change
@@ -74,7 +75,7 @@ A **minor version bump** (1.X.0) is REQUIRED when:
 - Adding a new optional input or slot.
 - Adding a new enum value to an input.
 - Tightening an output schema in a backward-compatible way (adding optional fields).
-- Body rewording that preserves output shape and passes the eval suite.
+- Body rewording that preserves output shape and meaning.
 - Adding new tokens to a bundle.
 
 ### 4.2.3 What counts as a patch
@@ -83,15 +84,18 @@ A **patch bump** (1.0.X) is REQUIRED when:
 
 - Fixing typos in body, description, or metadata.
 - Updating `description`, `tags`, or other metadata without behavioral impact.
-- Improving or adding evals without changing component behavior.
 
-### 4.2.4 The eval backstop
+### 4.2.4 Enforcement
 
-Semver for prompts is only meaningful when tied to behavioral tests, because the text itself cannot reveal whether a change is breaking. The spec requires:
+These rules are author-disciplined, the same way most package ecosystems work. The spec defines what counts as breaking; authors are responsible for honoring the rules when they publish.
 
-**Any minor or patch release MUST pass all evals the previous version passed.** If an eval fails, the change is major by definition.
+Consumers protect themselves with three mechanisms:
 
-This is the key rule that turns version numbers from aspiration into enforcement. Runtimes and CI systems MUST verify this before publishing a new version.
+- **Pin exact versions** when reliability matters more than upgrades.
+- **Read changelogs** before upgrading.
+- **Use lockfiles** (§4.1) so renderings stay reproducible across time.
+
+If an author publishes a body change as a patch when it should have been major, consumers using `^1.0.0` ranges will get unexpected behavior. This is a real risk — npm has the same risk and the ecosystem manages it through community norms, signaling, and consumer caution.
 
 ### 4.2.5 Version ranges in dependencies
 
@@ -129,14 +133,14 @@ metadata:
 
 ### 4.3.1 Fields
 
-| Field | Description |
-|-------|-------------|
-| `tested_models` | Models the author has actually run evals against. Factual claim. |
-| `compatible_models` | Models the author believes the component works with. Glob patterns permitted. |
-| `incompatible_models` | Models the author has determined the component does not work with. |
-| `min_context` | Minimum model context window size, in tokens. |
-| `style` | Informational. Values: `xml_structured`, `markdown_sections`, `plain_prose`, or any custom string. |
-| `profile` | `core` or `agent`. See [Part 5](05-profiles.md). |
+| Field                 | Description                                                                                        |
+|-----------------------|----------------------------------------------------------------------------------------------------|
+| `tested_models`       | Models the author has actually exercised the component against. Factual claim by the author.       |
+| `compatible_models`   | Models the author believes the component works with. Glob patterns permitted.                      |
+| `incompatible_models` | Models the author has determined the component does not work with.                                 |
+| `min_context`         | Minimum model context window size, in tokens.                                                      |
+| `style`               | Informational. Values: `xml_structured`, `markdown_sections`, `plain_prose`, or any custom string. |
+| `profile`             | `core` or `agent`. See [Part 5](05-profiles.md).                                                   |
 
 ### 4.3.2 Resolution semantics
 
@@ -158,82 +162,7 @@ When a component extends another, the effective compatibility is:
 
 A child cannot widen compatibility beyond what its parent supports.
 
-## 4.4 Evals
-
-An eval is a reproducible test of a component's behavior. Evals are what make versioning enforceable and what let consumers verify claims.
-
-### 4.4.1 Eval attachment
-
-A component MAY declare evals under `metadata.pbib.evals`:
-
-```yaml
-metadata:
-  pbib:
-    evals:
-      - suite: cod.review.security.evals@^1.0.0
-        profile: standard
-      - file: ./evals/security-review.yaml
-```
-
-Evals MAY be:
-
-- **Referenced by handle** — another component of a future `eval_suite` kind.
-- **Referenced by file path** — a file co-located with the component.
-
-### 4.4.2 Eval suite structure
-
-An eval suite is a set of test cases with expected outcomes. The exact format is **not yet standardized** by this spec — this is deliberate, because evaluation practice in the LLM field is still maturing.
-
-Minimum structure:
-
-```yaml
-version: 1
-suite: cod.review.security.evals
-cases:
-  - id: sql-injection-detection
-    inputs:
-      code: |
-        def query(user_input):
-            return db.execute("SELECT * FROM users WHERE id=" + user_input)
-      language: python
-      severity_threshold: medium
-    expected:
-      output_contains_cwe: "CWE-89"
-      output_min_severity: high
-  - id: no-false-positive-safe-code
-    inputs:
-      code: |
-        def query(user_input):
-            return db.execute("SELECT * FROM users WHERE id=%s", [user_input])
-      language: python
-    expected:
-      findings_max_count: 0
-```
-
-### 4.4.3 Eval results in registries
-
-A registry that hosts components SHOULD also host eval results per `(component, version, model)` tuple:
-
-```json
-{
-  "component": "cod.review.security",
-  "version": "1.0.0",
-  "model": "claude-opus-4-7",
-  "suite": "cod.review.security.evals@1.0.0",
-  "timestamp": "2026-01-15T10:30:00Z",
-  "passed": 47,
-  "failed": 2,
-  "score": 0.96
-}
-```
-
-This lets a consumer check, before adopting: "what does this component actually do, measured against what?"
-
-### 4.4.4 Evals and semver
-
-From §4.2.4: every minor/patch release MUST pass all evals the previous version passed. Publishing a version that fails this check MUST be blocked by the publishing toolchain.
-
-## 4.5 Deprecation
+## 4.4 Deprecation
 
 Components are deprecated before removal. A deprecated component continues to resolve but emits a warning at resolution time.
 
@@ -247,27 +176,27 @@ metadata:
       removal_planned: 2.0.0
 ```
 
-### 4.5.1 Deprecation rules
+### 4.4.1 Deprecation rules
 
 - Deprecation MUST NOT happen in a patch release.
 - A component SHOULD remain resolvable for at least one major version after deprecation.
 - Removal happens by publishing no new versions and eventually unpublishing old versions after a registry-defined deprecation period.
 
-### 4.5.2 Replacement semantics
+### 4.4.2 Replacement semantics
 
 When `replacement` is specified, automated migration tools MAY suggest the replacement to consumers. The spec does not mandate automatic substitution.
 
-## 4.6 Provenance
+## 4.5 Provenance
 
-Provenance is the chain of evidence connecting a component to its author. Without provenance, a component's claims (author identity, eval results, tested models) are assertions that cannot be verified.
+Provenance is the chain of evidence connecting a component to its author. Without provenance, a component's claims (author identity, tested models) are assertions that cannot be verified.
 
-### 4.6.1 APM-based provenance
+### 4.5.1 APM-based provenance
 
 When distributed via APM, provenance is handled by git itself: the commit SHA is a cryptographic hash of the content, signed git tags provide author verification, and `apm audit` scans for content-level threats (hidden Unicode, prompt injection).
 
 For most projects, APM's provenance model is sufficient and pbib needs to add nothing.
 
-### 4.6.2 Direct-distribution provenance
+### 4.5.2 Direct-distribution provenance
 
 For components distributed outside APM (downloaded directly, installed from custom registries), additional signing MAY be used:
 
@@ -277,7 +206,7 @@ For components distributed outside APM (downloaded directly, installed from cust
 
 The spec does not commit to a single mechanism. This is an **open question** for the community. See [README](../README.md).
 
-### 4.6.3 Supply-chain constraints
+### 4.5.3 Supply-chain constraints
 
 Because components can include other components transitively, a malicious dependency can inject content into the final rendered prompt. Defenses:
 
@@ -286,13 +215,13 @@ Because components can include other components transitively, a malicious depend
 - **Explicit transitive visibility** — runtimes SHOULD surface the full set of components that will be rendered, not just direct dependencies.
 - **APM audit integration** — when APM is present, pbib runtimes SHOULD surface `apm audit` findings alongside their own validation errors.
 
-## 4.7 Error format
+## 4.6 Error format
 
 Errors emitted by any spec-conformant runtime MUST follow this structure:
 
 ```yaml
 error:
-  code: COMPONENT_VALIDATION_FAILED
+  code: VALIDATION_FAILED
   message: "Input 'language' has invalid value 'java'"
   component: cod.review.security
   version: 1.0.0
@@ -303,23 +232,21 @@ error:
   trace_id: ...
 ```
 
-### 4.7.1 Error codes
+### 4.6.1 Error code prefixes
 
-The spec reserves the following error code prefixes:
+| Prefix          | Domain                                           |
+|-----------------|--------------------------------------------------|
+| `FORMAT_*`      | File format errors (Part 1)                      |
+| `KIND_*`        | Component kind violations (Part 2)               |
+| `COMPOSITION_*` | Composition rule violations (Part 3)             |
+| `VALIDATION_*`  | Input/output/slot validation                     |
+| `RESOLUTION_*`  | Dependency resolution                            |
+| `INTEGRITY_*`   | Hash, signature, or provenance failures          |
+| `RUNTIME_*`     | Execution-time failures (model errors, timeouts) |
 
-| Prefix | Domain |
-|--------|--------|
-| `FORMAT_*` | File format errors (Part 1) |
-| `KIND_*` | Component kind violations (Part 2) |
-| `COMPOSITION_*` | Composition rule violations (Part 3) |
-| `VALIDATION_*` | Input/output/slot validation |
-| `RESOLUTION_*` | Dependency resolution |
-| `INTEGRITY_*` | Hash, signature, or provenance failures |
-| `RUNTIME_*` | Execution-time failures (model errors, timeouts) |
+Specific codes within each prefix are implementation-defined.
 
-Specific codes within each prefix are implementation-defined; a future version of the spec may standardize them.
-
-## 4.8 Trace format
+## 4.7 Trace format
 
 Runtimes SHOULD emit a structured trace for every component invocation:
 
@@ -342,16 +269,18 @@ trace:
   output_validation: passed
 ```
 
-Traces enable drift tracking, debugging across versions, and the eval-tied validation claims this spec rests on. Without traces, the trust claims are assertions without evidence.
+Traces enable drift tracking, debugging across versions, and post-hoc investigation. When something goes wrong, the trace shows exactly which components were resolved, at what versions, with what inputs.
 
-## 4.9 Summary
+## 4.8 Summary
 
 Trust in this system is the product of several mechanisms working together:
 
-- **Semver + evals** mean version numbers are behavioral claims, not decorative.
+- **Semver** means version numbers carry meaning, even if author-disciplined.
 - **Lockfiles (APM or native) + content hashes** mean resolution is reproducible and tamper-evident.
 - **Compatibility metadata** means consumers can predict whether a component will work for them.
 - **Provenance** (via APM's git-based model or optional signing) means authorship claims are verifiable.
 - **Traces** mean runtime behavior is auditable after the fact.
 
-Any of these alone is insufficient. Together, they let a consumer reasonably trust a component they did not author — which is what separates this spec from a shared folder of markdown files.
+This is the trust model npm, pip, and most package ecosystems ship with. It's not perfect — it depends on author discipline and consumer caution — but it's what the field has accepted as a working baseline.
+
+For components where stronger guarantees matter (security-critical prompts, regulated industries), authors are encouraged to add their own behavioral testing using whatever framework fits their needs. The spec doesn't prescribe how; it just gets out of the way.

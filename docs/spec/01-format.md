@@ -26,7 +26,6 @@ Our spec adds no new top-level fields. All pbib-specific extensions live under *
 | `metadata.pbib.handle` | Under pbib | Our domain/composition system |
 | `metadata.pbib.extends` | Under pbib | Pbib composition only |
 | `metadata.pbib.inputs`, `slots`, `outputs` | Under pbib | Pbib type system |
-| `metadata.pbib.evals` | Under pbib | Pbib eval attachment |
 | `metadata.pbib.runtime_compatibility` | Under pbib | Distinct from Agent Skills' string `compatibility` |
 
 This nesting is what makes files work unchanged in Claude Code, Codex CLI, Cursor, OpenCode, and other Agent Skills consumers — they read only the standard fields and ignore our extensions.
@@ -78,7 +77,7 @@ A Level 1 component remains fully compatible with Level 0 consumers — they rea
 
 ### Level 2 — Composable
 
-Level 1 plus composition features: typed inputs, slot fills, output schemas, eval attachment.
+Level 1 plus composition features: typed inputs, slot fills, output schemas.
 
 Additional fields depend on which features are used. See [Part 3](03-composition.md).
 
@@ -103,13 +102,11 @@ metadata:
       format: met.p.format-json-findings
       focus: |
         Look for security vulnerabilities at **{{severity_threshold}}+** severity.
-    evals:
-      - file: ./evals/security-review.yaml
 tags: [security, code, review]
 ---
 ```
 
-**Enables:** Runtime input validation, composition, output schema enforcement, eval-tied versioning.
+**Enables:** Runtime input validation, composition, output schema enforcement.
 
 ### Capability matrix
 
@@ -121,7 +118,6 @@ tags: [security, code, review]
 | Referenceable by other components             | —  | ✓  | ✓  |
 | Validated inputs                              | —  | —  | ✓  |
 | Composition (extends, slots, includes)        | —  | —  | ✓  |
-| Eval-tied versioning                          | —  | —  | ✓  |
 | Output schema enforcement                     | —  | —  | ✓  |
 
 Authors SHOULD start at whichever level fits their current need and move up only when features become useful.
@@ -192,14 +188,14 @@ Files MUST be UTF-8. No BOM. Line endings MAY be LF or CRLF; runtimes MUST accep
 
 ### 1.5.1 Top-level (Agent Skills standard)
 
-| Field | Level | Description |
-|-------|-------|-------------|
-| `name` | L0+ required | Short identifier, hyphen-case, lowercase letters/digits/hyphens, max 64 chars. |
-| `description` | L0+ recommended | Short human-readable summary. Max 1024 characters per Agent Skills spec. |
-| `license` | Optional | License name (e.g., `MIT`) or path to license file. |
-| `allowed-tools` | Optional | Space-delimited list of pre-approved tools (experimental, Agent Skills field). |
-| `compatibility` | Optional | Environment requirements, free-form string, max 500 chars (Agent Skills field). Distinct from pbib's `runtime_compatibility`. |
-| `tags` | Optional | List of strings for categorization. |
+| Field           | Level           | Description                                                                                                                   |
+|-----------------|-----------------|-------------------------------------------------------------------------------------------------------------------------------|
+| `name`          | L0+ required    | Short identifier, hyphen-case, lowercase letters/digits/hyphens, max 64 chars.                                                |
+| `description`   | L0+ recommended | Short human-readable summary. Max 1024 characters per Agent Skills spec.                                                      |
+| `license`       | Optional        | License name (e.g., `MIT`) or path to license file.                                                                           |
+| `allowed-tools` | Optional        | Space-delimited list of pre-approved tools (experimental, Agent Skills field).                                                |
+| `compatibility` | Optional        | Environment requirements, free-form string, max 500 chars (Agent Skills field). Distinct from pbib's `runtime_compatibility`. |
+| `tags`          | Optional        | List of strings for categorization.                                                                                           |
 
 ### 1.5.2 Under `metadata` (flat)
 
@@ -210,27 +206,26 @@ Files MUST be UTF-8. No BOM. Line endings MAY be LF or CRLF; runtimes MUST accep
 
 ### 1.5.3 Under `metadata.pbib.*`
 
-| Field | Level | Description |
-|-------|-------|-------------|
-| `version` | L1+ required | Semantic version of this component. See [Part 4 §4.2](04-trust.md). |
-| `kind` | L1+ required | Component kind. See [Part 2](02-kinds.md). |
-| `handle` | L1 optional | Structured identifier for domain placement and composition. See §1.6. |
-| `body_source` | Optional | Path or handle of a file whose body this component uses (§1.4.3). |
-| `deprecated` | Optional | Deprecation notice. See [Part 4 §4.5](04-trust.md). |
-| `runtime_compatibility` | Optional | Pbib-specific model and runtime compatibility. See [Part 4 §4.3](04-trust.md). |
-| `inputs` | L2 when used | Runtime input declarations. See [Part 3 §3.2](03-composition.md). |
-| `slots` | L2 when used | Authoring-time extension points. See [Part 3 §3.3](03-composition.md). |
-| `outputs` | L2 when used | Output schema. See [Part 3 §3.5](03-composition.md). |
-| `extends` | L2 when used | Handle or name of parent component. See [Part 3 §3.6](03-composition.md). |
-| `slot_fills` | L2 when used | Values for parent's slots. |
-| `input_fills` | L2 when used | Values for nested components' inputs. |
-| `evals` | L2 when used | References to eval suites. See [Part 4 §4.4](04-trust.md). |
-| `triggers` | Optional (skill) | Trigger declarations for the skill kind. |
-| `tools` | Optional (skill) | Tool components the skill requires. |
-| `steps` | Required (workflow) | Workflow step declarations. See [Part 2 §2.7](02-kinds.md). |
-| `values` | Required (token_bundle) | Token value dictionary. See [Part 2 §2.3](02-kinds.md). |
-| `schema` | Required (tool) | Tool input/output schema. See [Part 2 §2.10](02-kinds.md). |
-| `overrides` | Required (skin) | Skin override declarations. See [Part 2 §2.8](02-kinds.md). |
+| Field                   | Level                   | Description                                                                    |
+|-------------------------|-------------------------|--------------------------------------------------------------------------------|
+| `version`               | L1+ required            | Semantic version of this component. See [Part 4 §4.2](04-trust.md).            |
+| `kind`                  | L1+ required            | Component kind. See [Part 2](02-kinds.md).                                     |
+| `handle`                | L1 optional             | Structured identifier for domain placement and composition. See §1.6.          |
+| `body_source`           | Optional                | Path or handle of a file whose body this component uses (§1.4.3).              |
+| `deprecated`            | Optional                | Deprecation notice. See [Part 4 §4.4](04-trust.md).                            |
+| `runtime_compatibility` | Optional                | Pbib-specific model and runtime compatibility. See [Part 4 §4.3](04-trust.md). |
+| `inputs`                | L2 when used            | Runtime input declarations. See [Part 3 §3.2](03-composition.md).              |
+| `slots`                 | L2 when used            | Authoring-time extension points. See [Part 3 §3.3](03-composition.md).         |
+| `outputs`               | L2 when used            | Output schema. See [Part 3 §3.5](03-composition.md).                           |
+| `extends`               | L2 when used            | Handle or name of parent component. See [Part 3 §3.6](03-composition.md).      |
+| `slot_fills`            | L2 when used            | Values for parent's slots.                                                     |
+| `input_fills`           | L2 when used            | Values for nested components' inputs.                                          |
+| `triggers`              | Optional (skill)        | Trigger declarations for the skill kind.                                       |
+| `tools`                 | Optional (skill)        | Tool components the skill requires.                                            |
+| `steps`                 | Required (workflow)     | Workflow step declarations. See [Part 2 §2.7](02-kinds.md).                    |
+| `values`                | Required (token_bundle) | Token value dictionary. See [Part 2 §2.3](02-kinds.md).                        |
+| `schema`                | Required (tool)         | Tool input/output schema. See [Part 2 §2.10](02-kinds.md).                     |
+| `overrides`             | Required (skin)         | Skin override declarations. See [Part 2 §2.8](02-kinds.md).                    |
 
 ## 1.6 Name and handle
 
@@ -290,12 +285,12 @@ Scopes disambiguate authors publishing in overlapping domains.
 
 The body MAY contain variable references. Four forms:
 
-| Form | Meaning | Resolved at |
-|------|---------|-------------|
-| `{{input_name}}` | A runtime input | render time |
-| `{{slot: slot_name}}` | A slot fill | load time |
-| `{{token: bundle.key}}` | A token value | load time |
-| `{{include: name-or-handle}}` | Inline another component's body | load time |
+| Form                          | Meaning                         | Resolved at |
+|-------------------------------|---------------------------------|-------------|
+| `{{input_name}}`              | A runtime input                 | render time |
+| `{{slot: slot_name}}`         | A slot fill                     | load time   |
+| `{{token: bundle.key}}`       | A token value                   | load time   |
+| `{{include: name-or-handle}}` | Inline another component's body | load time   |
 
 See [Part 3 §3.8](03-composition.md) for resolution semantics.
 
@@ -303,14 +298,14 @@ See [Part 3 §3.8](03-composition.md) for resolution semantics.
 
 When a component references another (in `extends`, `slot_fills`, `input_fills`, `{{include: ...}}`, or workflow `steps`), the reference may take three forms:
 
-| Form | Example | Meaning |
-|------|---------|---------|
-| Plain name | `reviewer-voice` | Within the same scope (repo/registry). |
-| Handle | `met.p.reviewer-voice` | Explicit domain placement. |
-| Handle with version pin | `met.p.reviewer-voice@1.0.0` | Exact version. |
-| Handle with range | `met.p.reviewer-voice@^1.0.0` | Semver range. |
-| Scoped handle | `@anthropic/met.p.reviewer-voice` | Cross-scope reference. |
-| Git path | `github/org/repo/path/to/component` | APM-style git reference. |
+| Form                    | Example                             | Meaning                                |
+|-------------------------|-------------------------------------|----------------------------------------|
+| Plain name              | `reviewer-voice`                    | Within the same scope (repo/registry). |
+| Handle                  | `met.p.reviewer-voice`              | Explicit domain placement.             |
+| Handle with version pin | `met.p.reviewer-voice@1.0.0`        | Exact version.                         |
+| Handle with range       | `met.p.reviewer-voice@^1.0.0`       | Semver range.                          |
+| Scoped handle           | `@anthropic/met.p.reviewer-voice`   | Cross-scope reference.                 |
+| Git path                | `github/org/repo/path/to/component` | APM-style git reference.               |
 
 Runtimes MUST resolve plain names against the current scope first. Handles are resolved through the registry. Git paths are resolved via the distribution tool (APM or git clone).
 
@@ -376,8 +371,6 @@ metadata:
       format: met.p.format-json-findings
       focus: |
         Look for security vulnerabilities at **{{severity_threshold}}+** severity.
-    evals:
-      - file: ./evals/security-review.yaml
 tags: [security, code, review]
 ---
 ```
@@ -399,4 +392,4 @@ A runtime MUST validate:
 9. For Level 1: both `metadata.pbib.version` and `metadata.pbib.kind` are present.
 10. For Level 2: additional required fields for whichever composition features are used (validated per [Part 3](03-composition.md)).
 
-Validation failures MUST produce structured errors naming the file, the field, and the violation. See [Part 4 §4.7](04-trust.md) for the error format.
+Validation failures MUST produce structured errors naming the file, the field, and the violation. See [Part 4 §4.6](04-trust.md) for the error format.

@@ -11,16 +11,16 @@ At **Level 0**, `kind` MAY be omitted. Runtimes infer from context:
 
 ## 2.1 Kind overview
 
-| Kind | Purpose | Profile | Available at |
-|------|---------|---------|--------------|
-| `token_bundle` | Named terminal values | core | L1+ |
-| `primitive` | Reusable instruction fragment | core | L1+ |
-| `pattern` | Structural template with slots | core | L1+ |
-| `task` | Complete invokable prompt | core | L1+ |
-| `workflow` | Declared sequence of tasks | core | L2 |
-| `skin` | Metadata and token overlay | core | L2 |
-| `skill` | Agent capability bundle | agent | **L0+** |
-| `tool` | Tool schema and invocation guidance | agent | L1+ |
+| Kind           | Purpose                             | Profile | Available at |
+|----------------|-------------------------------------|---------|--------------|
+| `token_bundle` | Named terminal values               | core    | L1+          |
+| `primitive`    | Reusable instruction fragment       | core    | L1+          |
+| `pattern`      | Structural template with slots      | core    | L1+          |
+| `task`         | Complete invokable prompt           | core    | L1+          |
+| `workflow`     | Declared sequence of tasks          | core    | L2           |
+| `skin`         | Metadata and token overlay          | core    | L2           |
+| `skill`        | Agent capability bundle             | agent   | **L0+**      |
+| `tool`         | Tool schema and invocation guidance | agent   | L1+          |
 
 `skill` is the only kind available at Level 0, because SKILL.md is an established Agent Skills format with existing consumers. Every other kind requires Level 1 metadata to be meaningful.
 
@@ -48,12 +48,12 @@ Dashes mark combinations that don't make sense. The spec does not enforce this t
 
 Before walking through each kind, a summary of how components reuse each other. Composition is the whole point of the system; these are the mechanisms that enable it.
 
-| Mechanism | Syntax | Relationship | Use when |
-|-----------|--------|--------------|----------|
-| **Extension** | `extends:` in front matter | Child IS-A parent | Creating variants of the same thing |
-| **Inclusion** | `{{include: ...}}` in body | Component USES content | Shared text fragments |
-| **Slot installation** | `slot_fills:` in front matter | Pattern + choice of filler | Structural composition |
-| **Workflow orchestration** | `steps:` (workflow kind) | Task sequencing | Multi-step execution |
+| Mechanism                  | Syntax                        | Relationship               | Use when                            |
+|----------------------------|-------------------------------|----------------------------|-------------------------------------|
+| **Extension**              | `extends:` in front matter    | Child IS-A parent          | Creating variants of the same thing |
+| **Inclusion**              | `{{include: ...}}` in body    | Component USES content     | Shared text fragments               |
+| **Slot installation**      | `slot_fills:` in front matter | Pattern + choice of filler | Structural composition              |
+| **Workflow orchestration** | `steps:` (workflow kind)      | Task sequencing            | Multi-step execution                |
 
 Plus **tokens** — named terminal values referenced by `{{token: bundle.key}}` — which are simpler than the other four but round out the picture.
 
@@ -97,7 +97,7 @@ A reusable instruction fragment. The smallest composable unit that carries promp
 
 **Level:** L1+ (primitives need identifiers to be referenced).
 **Required:** Level 1 fields plus body.
-**Optional:** `inputs`, `outputs`, `runtime_compatibility`, `evals`.
+**Optional:** `inputs`, `outputs`, `runtime_compatibility`.
 
 ```yaml
 ---
@@ -135,7 +135,7 @@ A structural template with declared slots that specializations fill.
 
 **Level:** L1+ addressable; inherently compositional at L2.
 **Required:** Level 1 fields, `slots`, and body.
-**Optional:** `inputs`, `outputs`, `runtime_compatibility`, `evals`.
+**Optional:** `inputs`, `outputs`, `runtime_compatibility`.
 
 ```yaml
 ---
@@ -421,7 +421,7 @@ A tool schema and invocation guidance.
 
 **Level:** L1+.
 **Required:** Level 1 fields plus `schema`.
-**Optional:** body, `runtime_compatibility`, `evals`.
+**Optional:** body, `runtime_compatibility`.
 
 ```yaml
 ---

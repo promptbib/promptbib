@@ -41,13 +41,12 @@ A core-profile runtime MUST implement:
 - Input, slot, and output validation.
 - Lockfile verification (either APM's `apm.lock.yaml` or pbib's native lockfile) ([Part 4 §4.1](04-trust.md)).
 - Semver resolution (§4.2.5).
-- Error format (§4.7).
+- Error format (§4.6).
 
 A core-profile runtime SHOULD implement:
 
 - Compatibility checking (§4.3.2).
-- Trace emission (§4.8).
-- Eval execution when resolving (§4.4).
+- Trace emission (§4.7).
 
 ### 5.1.4 Permitted omissions
 
@@ -100,12 +99,12 @@ metadata:
 
 #### 5.2.4.1 `context_window` specification
 
-| Field | Description |
-|-------|-------------|
-| `priority` | `low`, `medium`, `high`. Guides truncation order under context pressure. |
-| `max_tokens` | Soft limit for this input. Runtime may truncate to fit. |
-| `truncation` | Strategy: `head`, `tail`, or `smart` (implementation-defined). |
-| `streaming` | Boolean. Whether the input arrives incrementally. Default `false`. |
+| Field        | Description                                                              |
+|--------------|--------------------------------------------------------------------------|
+| `priority`   | `low`, `medium`, `high`. Guides truncation order under context pressure. |
+| `max_tokens` | Soft limit for this input. Runtime may truncate to fit.                  |
+| `truncation` | Strategy: `head`, `tail`, or `smart` (implementation-defined).           |
+| `streaming`  | Boolean. Whether the input arrives incrementally. Default `false`.       |
 
 When multiple `context_window` inputs compete for budget, the runtime MUST truncate in ascending priority order. Ties are broken by declaration order.
 
@@ -173,8 +172,8 @@ A runtime documents its conformance by declaring supported profiles. Format is c
 
 | Runtime supports | Can execute components targeting |
 |------------------|----------------------------------|
-| core only | core only |
-| agent | core, agent |
+| core only        | core only                        |
+| agent            | core, agent                      |
 
 Core profile is the stable floor. Agent profile is today's primary extension. Future profiles MUST NOT break core-profile semantics for components targeting core.
 

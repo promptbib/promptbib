@@ -1,7 +1,7 @@
 # Portable Agent Component Format
 
-- **Status:** Draft
-- **Editors:** TBD
+**Status:** Draft
+**Editors:** TBD
 
 A file format and semantic model for LLM instruction artifacts — prompts, skills, personas, tools, workflows — that makes them reusable within teams, composable across projects, and verifiable between agents.
 
@@ -21,12 +21,13 @@ A file format and semantic model for LLM instruction artifacts — prompts, skil
 
 1. **Portability.** One format that any LLM-powered system (chat interface, coding agent, internal tool) can consume.
 2. **Reusability.** Components can be composed, extended, and shared without copy-paste.
-3. **Verifiability.** Every component is inspectable, typeable, and optionally eval-backed. A consumer can determine what a component does and how well it does it before running it.
+3. **Verifiability.** Every component is inspectable, typeable, and traceable. A consumer can determine what a component does — and what it depends on — before running it.
 4. **Trust between agents.** When an agent installs a component from a third party — or hands work to another agent via a shared component — the contract is explicit.
 
 ## Non-goals
 
 - **Prescribing prompt style.** The format is agnostic about whether component bodies use XML, markdown, or plain prose.
+- **Defining how to test components.** Behavioral testing — verifying that a component produces the outputs it claims — is out of scope. Authors choose their own approach (Promptfoo, OpenAI Evals, Anthropic's tools, custom scripts, manual review). The spec defines what a component *is* and how it composes, not how to verify it works.
 - **Replacing Agent Skills.** This spec extends the [Agent Skills](https://agentskills.io) format; it does not replace it. Every Level 0 component is a valid Agent Skills skill.
 - **Competing with APM or other package managers.** Distribution is handled by existing tools ([APM](https://microsoft.github.io/apm/), git, Agent Skills registries). This spec defines the format those tools distribute.
 - **Solving every prompt problem.** The spec is intentionally small. Orchestration, retrieval, and agent control flow are mostly out of scope.
@@ -55,12 +56,12 @@ See [Part 1 §1.2](spec/01-format.md) for details.
 
 The spec is organized into four layers:
 
-| Layer                     | What it defines                               | Part                             |
-|---------------------------|-----------------------------------------------|----------------------------------|
-| 1. File format            | How a single component is written on disk     | [Part 1](spec/01-format.md)      |
-| 2. Semantic model         | Component kinds and what each can do          | [Part 2](spec/02-kinds.md)       |
-| 3. Composition            | How components reference, extend, and combine | [Part 3](spec/03-composition.md) |
-| 4. Trust and verification | Evals, compatibility, provenance              | [Part 4](spec/04-trust.md)       |
+| Layer                   | What it defines                                    | Part                             |
+|-------------------------|----------------------------------------------------|----------------------------------|
+| 1. File format          | How a single component is written on disk          | [Part 1](spec/01-format.md)      |
+| 2. Semantic model       | Component kinds and what each can do               | [Part 2](spec/02-kinds.md)       |
+| 3. Composition          | How components reference, extend, and combine      | [Part 3](spec/03-composition.md) |
+| 4. Trust and provenance | Versioning, compatibility, deprecation, provenance | [Part 4](spec/04-trust.md)       |
 
 [Part 5: Profiles](spec/05-profiles.md) defines conformance levels (core, agent) for runtimes.
 
@@ -75,7 +76,7 @@ Worked examples are in [`examples/`](examples/).
 
 ## One-page summary
 
-Every component is a text file with YAML front matter. At minimum, it declares `name` and `description` (standard Agent Skills fields). When authors want more — versioning, composition, typed inputs, evals — they add fields under `metadata.pbib.*`. Tools that don't know about pbib ignore those fields; our runtime reads them.
+Every component is a text file with YAML front matter. At minimum, it declares `name` and `description` (standard Agent Skills fields). When authors want more — versioning, composition, typed inputs — they add fields under `metadata.pbib.*`. Tools that don't know about pbib ignore those fields; our runtime reads them.
 
 A minimal component:
 
@@ -111,23 +112,11 @@ metadata:
       format: met.p.format-json-findings
       focus: |
         Look for security vulnerabilities at **{{severity_threshold}}+** severity.
-    evals:
-      - file: ./evals/security-review.yaml
 tags: [security, code, review]
 ---
 ```
 
 Same file. Works in Claude Code, Codex CLI, OpenCode at Level 0. Works in pbib-aware runtimes at Level 2. No conversion, no export step.
-
-## The runtime's role
-
-A pbib runtime is a library or service that parses components, resolves composition, validates inputs and outputs, and produces rendered prompt text. Runtimes are invoked by consumers — typically agents, but also applications, pipelines, or CI systems.
-
-- At Level 0, a runtime is optional; the component file is directly usable as a prompt.
-- At Level 1, a runtime is optional but adds addressability and version verification.
-- At Level 2, a runtime is required to resolve composition features. Without one, the body contains unresolved template markers.
-
-A consumer may embed a runtime as a library, call it as a service, or skip it entirely and use components at Level 0.
 
 ## Conformance
 
@@ -139,6 +128,6 @@ Where this spec uses the words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT*
 
 - **Canonical domain table.** The three-letter domains in examples (`cod`, `mkt`, `met`) are illustrative. The actual table — which codes exist, who owns each, how new ones are added — is a registry-governance concern to be resolved before 1.0.
 - **Templating scope.** Whether a minimal template language (conditionals, loops) inside component bodies would pay for itself, or whether composition should remain purely structural.
-- **Eval format.** The minimum eval structure in Part 4 is a sketch. The actual format is not yet standardized because evaluation practice in the LLM field is still maturing.
+- **Provenance signing.** Which signing format(s) to standardize on for direct-distribution provenance — Sigstore, SSH signatures, minisign, or another.
 
 Feedback on these is especially welcome.

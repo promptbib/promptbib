@@ -6,22 +6,25 @@ A primitive is a reusable instruction fragment. Primitives have a body, typed in
 
 ```yaml
 ---
-handle: met.p.reviewer-voice
-version: 1.0.0
-kind: primitive
-spec: 0.1.0
+name: reviewer-voice
 description: Establishes a code-reviewer persona with configurable specialty and tone
-inputs:
-  specialty:
-    type: string
-    required: true
-    description: What this reviewer specializes in (e.g., "application security")
-  tone:
-    type: token_ref
-    bundle: met.tone@^1.0.0
-    default: terse
-compatibility:
-  compatible_models: ["claude-*", "gpt-4*"]
+license: MIT
+metadata:
+  pbib:
+    version: 1.0.0
+    kind: primitive
+    handle: met.p.reviewer-voice
+    inputs:
+      specialty:
+        type: string
+        required: true
+        description: What this reviewer specializes in (e.g., "application security")
+      tone:
+        type: token_ref
+        bundle: met.tone@^1.0.0
+        default: terse
+    runtime_compatibility:
+      compatible_models: ["claude-*", "gpt-4*"]
 tags: [meta, persona, code]
 ---
 You are an experienced code reviewer specializing in {{specialty}}.
@@ -34,11 +37,13 @@ the code does. If you are uncertain whether something is an issue, omit it.
 
 ## Walkthrough
 
-**`handle: met.p.reviewer-voice`.** The `met.p.` prefix isn't mandatory — it's a convention some teams use to signal "this is a meta-domain primitive." The runtime determines kind from the `kind:` field, not the handle.
+**`name: reviewer-voice`.** Primary identifier within this scope.
 
-**`inputs:` with two entries.** `specialty` is a required string. `tone` is a `token_ref` that must resolve to a key in the `met.tone@^1.0.0` bundle, with a default of `terse`.
+**`metadata.pbib.handle: met.p.reviewer-voice`.** The `met.p.` prefix isn't mandatory — it's a convention some teams use to signal "this is a meta-domain primitive." The runtime determines kind from `kind:`, not the handle.
 
-**`compatibility.compatible_models`.** The author claims this works on any Claude model and any GPT-4 variant. Runtimes use this to warn if a consumer applies the component to, say, a small open-source model.
+**`metadata.pbib.inputs:` with two entries.** `specialty` is a required string. `tone` is a `token_ref` that must resolve to a key in the `met.tone@^1.0.0` bundle, with a default of `terse`.
+
+**`metadata.pbib.runtime_compatibility.compatible_models`.** The author claims this works on any Claude model and any GPT-4 variant. Runtimes use this to warn if a consumer applies the component to, say, a small open-source model.
 
 **Body.** Two variable references (`{{specialty}}` and `{{token: met.tone.[tone]}}`) plus static instruction text. The body doesn't use XML tags — for this primitive, prose is enough.
 
@@ -55,12 +60,14 @@ A pattern's body references this primitive via a slot:
 And a task fills the slot:
 
 ```yaml
-slot_fills:
-  persona: met.p.reviewer-voice@^1.0.0
-input_fills:
-  persona:
-    specialty: "application security"
-    tone: formal
+metadata:
+  pbib:
+    slot_fills:
+      persona: met.p.reviewer-voice
+    input_fills:
+      persona:
+        specialty: "application security"
+        tone: formal
 ```
 
 The task passes values to the primitive's inputs via `input_fills`.
@@ -71,15 +78,17 @@ Another component can inline this primitive's body directly:
 
 ```yaml
 ---
-handle: some.other.task
-kind: task
-spec: 0.1.0
-inputs:
-  code: { type: string, required: true }
-input_fills:
-  "met.p.reviewer-voice@^1.0.0":
-    specialty: "Python performance"
-    tone: conversational
+name: some-other-task
+metadata:
+  pbib:
+    version: 1.0.0
+    kind: task
+    inputs:
+      code: { type: string, required: true }
+    input_fills:
+      "met.p.reviewer-voice@^1.0.0":
+        specialty: "Python performance"
+        tone: conversational
 ---
 {{include: met.p.reviewer-voice@^1.0.0}}
 
@@ -98,6 +107,6 @@ The spec's answer: use extension only at the pattern/task layer, and use inclusi
 ## What this demonstrates
 
 - Inputs with types, defaults, and token references.
-- The compatibility metadata pattern.
+- The compatibility metadata pattern under `metadata.pbib.runtime_compatibility`.
 - How tokens are dereferenced via indirect `[input_name]` substitution.
 - The primitive's role: small, reusable, leaf-level.

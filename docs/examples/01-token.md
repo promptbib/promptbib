@@ -6,27 +6,32 @@ A token bundle defines named terminal values that other components reference. Th
 
 ```yaml
 ---
-handle: met.tone
-version: 1.0.0
-kind: token_bundle
-spec: 0.1.0
+name: tone
 description: Named tone values for prompt authors
-values:
-  formal: "Use precise, professional language. Avoid contractions and colloquialisms."
-  terse: "Be maximally concise. No preamble. No caveats. No closing remarks."
-  conversational: "Write naturally, as if explaining to a colleague over coffee."
-  authoritative: "Write with confidence. State conclusions directly."
+license: MIT
+metadata:
+  pbib:
+    version: 1.0.0
+    kind: token_bundle
+    handle: met.tone
+    values:
+      formal: "Use precise, professional language. Avoid contractions and colloquialisms."
+      terse: "Be maximally concise. No preamble. No caveats. No closing remarks."
+      conversational: "Write naturally, as if explaining to a colleague over coffee."
+      authoritative: "Write with confidence. State conclusions directly."
 tags: [meta, style, tone]
 ---
 ```
 
 ## Walkthrough
 
-**`handle: met.tone`.** The domain is `met` (meta), which is where cross-cutting components live. The family is `tone` — there's no further segment needed because this is a single bundle.
+**`name: tone`.** The Agent Skills required field. Within this scope, just `tone` is enough.
 
-**`kind: token_bundle`.** The kind tells the runtime: this has no body, no inputs, no slots. Just look for `values:`.
+**`metadata.pbib.handle: met.tone`.** The optional structured handle places this on the domain axis. The domain is `met` (meta), which is where cross-cutting components live. Useful for cross-scope references.
 
-**`values:`.** Each entry is a leaf — a string terminal value. Tokens don't reference other tokens (see Part 2 §2.3).
+**`metadata.pbib.kind: token_bundle`.** The kind tells the runtime: this has no body, no inputs, no slots. Just look for `values:`.
+
+**`metadata.pbib.values:`.** Each entry is a leaf — a string terminal value. Tokens don't reference other tokens (see Part 2 §2.4).
 
 ## How it's used
 
@@ -41,11 +46,13 @@ Other components reference tokens in two ways.
 **Indirect reference** — the key comes from an input:
 
 ```yaml
-inputs:
-  tone:
-    type: token_ref
-    bundle: met.tone@^1.0.0
-    default: terse
+metadata:
+  pbib:
+    inputs:
+      tone:
+        type: token_ref
+        bundle: met.tone@^1.0.0
+        default: terse
 ---
 {{token: met.tone.[tone]}}
 ```
@@ -61,7 +68,7 @@ Token bundles version as a unit. If you add `warm` to the bundle, that's a minor
 A project can override a token value in its manifest:
 
 ```yaml
-# promptbib.yaml
+# project manifest
 tokens:
   "met.tone.formal": "Use precise language consistent with ACME's style guide, section 3.2."
 ```
@@ -70,6 +77,7 @@ The override matches the original type (string) and becomes the value used when 
 
 ## What this demonstrates
 
-- The minimum structure a valid component needs.
+- The minimum structure a Level 1 component needs.
+- Where Agent Skills standard fields (`name`, `description`, `license`, `tags`) live vs. where pbib-specific fields live.
 - The token bundle pattern: values, not logic.
 - The resolution scope system at its simplest.

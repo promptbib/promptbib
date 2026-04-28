@@ -52,32 +52,32 @@ metadata:
 
 ### 3.2.2 Input types
 
-| Type | Description |
-|------|-------------|
-| `string` | A text value. |
-| `integer` | A whole number. |
-| `number` | A numeric value (integer or float). |
-| `boolean` | True or false. |
-| `enum[a, b, c]` | One of an explicit set of values. |
-| `list[T]` | A sequence of values of type T. |
-| `object` | A nested mapping. When used, `schema` MUST be provided. |
-| `token_ref` | A reference to a value in a token bundle. Requires `bundle`. |
-| `component_ref` | A reference to another component. May require `allowed_kinds`. |
+| Type             | Description                                                              |
+|------------------|--------------------------------------------------------------------------|
+| `string`         | A text value.                                                            |
+| `integer`        | A whole number.                                                          |
+| `number`         | A numeric value (integer or float).                                      |
+| `boolean`        | True or false.                                                           |
+| `enum[a, b, c]`  | One of an explicit set of values.                                        |
+| `list[T]`        | A sequence of values of type T.                                          |
+| `object`         | A nested mapping. When used, `schema` MUST be provided.                  |
+| `token_ref`      | A reference to a value in a token bundle. Requires `bundle`.             |
+| `component_ref`  | A reference to another component. May require `allowed_kinds`.           |
 | `context_window` | Large contextual input with truncation metadata. **Agent profile only.** |
 
 ### 3.2.3 Input specification fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `type` | type expression | Required. |
-| `required` | boolean | Default `false`. |
-| `default` | any | Default value if not required. Must match `type`. |
-| `description` | string | Human-readable description. |
-| `bundle` | handle or name | For `token_ref`: the token bundle. |
-| `allowed_kinds` | list | For `component_ref`: permitted component kinds. |
-| `schema` | JSON schema | For `object`: the nested shape. |
-| `min`, `max` | number | For numeric types: inclusive bounds. |
-| `pattern` | regex | For string: validation regex. |
+| Field           | Type            | Description                                       |
+|-----------------|-----------------|---------------------------------------------------|
+| `type`          | type expression | Required.                                         |
+| `required`      | boolean         | Default `false`.                                  |
+| `default`       | any             | Default value if not required. Must match `type`. |
+| `description`   | string          | Human-readable description.                       |
+| `bundle`        | handle or name  | For `token_ref`: the token bundle.                |
+| `allowed_kinds` | list            | For `component_ref`: permitted component kinds.   |
+| `schema`        | JSON schema     | For `object`: the nested shape.                   |
+| `min`, `max`    | number          | For numeric types: inclusive bounds.              |
+| `pattern`       | regex           | For string: validation regex.                     |
 
 ### 3.2.4 Validation
 
@@ -128,14 +128,14 @@ metadata:
 
 ### 3.3.2 Slot types
 
-| Type | Description |
-|------|-------------|
-| `string` | A text value, no rendering assumptions. |
-| `markdown` | A text value, interpreted as markdown when rendered. |
-| `list[string]` | A sequence of strings. |
-| `list[markdown]` | A sequence of markdown fragments. |
-| `component_ref` | A handle or name pointing at a primitive or pattern to install. |
-| `list[component_ref]` | A sequence of component references, rendered in order. |
+| Type                  | Description                                                     |
+|-----------------------|-----------------------------------------------------------------|
+| `string`              | A text value, no rendering assumptions.                         |
+| `markdown`            | A text value, interpreted as markdown when rendered.            |
+| `list[string]`        | A sequence of strings.                                          |
+| `list[markdown]`      | A sequence of markdown fragments.                               |
+| `component_ref`       | A handle or name pointing at a primitive or pattern to install. |
+| `list[component_ref]` | A sequence of component references, rendered in order.          |
 
 Slots MUST be textual types. Slots cannot be `object`, `integer`, or other non-textual types — slots produce prompt text.
 
@@ -248,11 +248,11 @@ metadata:
 
 ### 3.5.2 Output formats
 
-| Format | Description |
-|--------|-------------|
-| `text` | Unstructured text. No schema. |
-| `markdown` | Markdown-formatted text. No schema. |
-| `json` | JSON output matching `schema`. |
+| Format       | Description                                                            |
+|--------------|------------------------------------------------------------------------|
+| `text`       | Unstructured text. No schema.                                          |
+| `markdown`   | Markdown-formatted text. No schema.                                    |
+| `json`       | JSON output matching `schema`.                                         |
 | `structured` | Provider-specific structured output (e.g., function-calling response). |
 
 ### 3.5.3 Validation and retry
