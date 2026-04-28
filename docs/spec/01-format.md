@@ -23,7 +23,7 @@ Our spec adds no new top-level fields. All pbib-specific extensions live under *
 | `metadata.author` | Flat under metadata | Universal, community convention |
 | `metadata.pbib.version` | Under pbib | Our semver rules govern it |
 | `metadata.pbib.kind` | Under pbib | Our kind vocabulary |
-| `metadata.pbib.handle` | Under pbib | Our domain/composition system |
+| `metadata.pbib.handle` | Under pbib | Our handle grammar and namespacing |
 | `metadata.pbib.extends` | Under pbib | Pbib composition only |
 | `metadata.pbib.inputs`, `slots`, `outputs` | Under pbib | Pbib type system |
 | `metadata.pbib.runtime_compatibility` | Under pbib | Distinct from Agent Skills' string `compatibility` |
@@ -199,10 +199,10 @@ Files MUST be UTF-8. No BOM. Line endings MAY be LF or CRLF; runtimes MUST accep
 
 ### 1.5.2 Under `metadata` (flat)
 
-| Field | Level | Description |
-|-------|-------|-------------|
+| Field             | Level    | Description                                        |
+|-------------------|----------|----------------------------------------------------|
 | `metadata.author` | Optional | Author name or organization. Universal convention. |
-| `metadata.pbib` | L1+ | Pbib-specific extension block. See §1.5.3. |
+| `metadata.pbib`   | L1+      | Pbib-specific extension block. See §1.5.3.         |
 
 ### 1.5.3 Under `metadata.pbib.*`
 
@@ -210,7 +210,7 @@ Files MUST be UTF-8. No BOM. Line endings MAY be LF or CRLF; runtimes MUST accep
 |-------------------------|-------------------------|--------------------------------------------------------------------------------|
 | `version`               | L1+ required            | Semantic version of this component. See [Part 4 §4.2](04-trust.md).            |
 | `kind`                  | L1+ required            | Component kind. See [Part 2](02-kinds.md).                                     |
-| `handle`                | L1 optional             | Structured identifier for domain placement and composition. See §1.6.          |
+| `handle`                | L1 optional             | Structured cross-scope identifier. See §1.6.                                   |
 | `body_source`           | Optional                | Path or handle of a file whose body this component uses (§1.4.3).              |
 | `deprecated`            | Optional                | Deprecation notice. See [Part 4 §4.4](04-trust.md).                            |
 | `runtime_compatibility` | Optional                | Pbib-specific model and runtime compatibility. See [Part 4 §4.3](04-trust.md). |
@@ -241,7 +241,7 @@ Every component has a `name` — it's the Agent Skills required field. `name` un
 
 ### 1.6.2 `handle` is optional structured metadata
 
-A component MAY declare a `handle` under `metadata.pbib.handle` for components participating in the domain taxonomy:
+A component MAY declare a `handle` under `metadata.pbib.handle` for cross-scope addressability:
 
 ```yaml
 metadata:
@@ -249,10 +249,10 @@ metadata:
     handle: cod.review.security
 ```
 
-The handle is what enables the "periodic table" organization — domain code (`cod`), family (`review`), variant (`security`). It's useful for:
+Handles are useful for:
 
-- Cross-registry discovery ("find all security-review components").
-- Registry indexing by domain.
+- Cross-registry discovery ("find all components in this namespace").
+- Registry indexing by namespace.
 - Disambiguating when multiple registries contain similarly-named components.
 
 For small teams and internal libraries, `name` alone is sufficient. For public registries and cross-organization sharing, handles provide structure.
@@ -260,15 +260,15 @@ For small teams and internal libraries, `name` alone is sufficient. For public r
 ### 1.6.3 Handle grammar
 
 ```
-handle         = domain "." family *("." segment)
-domain         = 3*4 ALPHA                       ; 3-4 lowercase letters
-family         = segment
-segment        = ALPHA *(ALPHA / DIGIT / "-")    ; lowercase, kebab-case
+handle  = segment *("." segment)
+segment = ALPHA *(ALPHA / DIGIT / "-")    ; lowercase, kebab-case
 ```
 
 When both `name` and `handle` are present, `name` SHOULD be the last segment of `handle`. Runtimes MAY warn on divergence but MUST NOT reject.
 
-Three-letter domains are reserved for a canonical table (governance TBD). Four-letter prefixes are available for project-local or vendor-specific namespacing (e.g., `acme`).
+Authors choose the structure that fits their library — the spec does not reserve any namespaces, define any "official" categories, or curate which segments mean what. Examples in this spec use short labels like `cod`, `met`, `mkt` for terseness; these are not standardized and have no special meaning.
+
+Disambiguation across organizations is handled by scopes (§1.6.4), not by the segment vocabulary.
 
 ### 1.6.4 Scoped handles
 
@@ -279,7 +279,7 @@ A handle MAY be scoped with a leading `@org/` prefix:
 @acme/biz.proposal.draft
 ```
 
-Scopes disambiguate authors publishing in overlapping domains.
+Scopes disambiguate authors publishing in overlapping namespaces. Anyone can publish under their own scope; no central registration is required by this spec.
 
 ## 1.7 Variable interpolation
 
@@ -301,7 +301,7 @@ When a component references another (in `extends`, `slot_fills`, `input_fills`, 
 | Form                    | Example                             | Meaning                                |
 |-------------------------|-------------------------------------|----------------------------------------|
 | Plain name              | `reviewer-voice`                    | Within the same scope (repo/registry). |
-| Handle                  | `met.p.reviewer-voice`              | Explicit domain placement.             |
+| Handle                  | `met.p.reviewer-voice`              | Cross-scope structured identifier.     |
 | Handle with version pin | `met.p.reviewer-voice@1.0.0`        | Exact version.                         |
 | Handle with range       | `met.p.reviewer-voice@^1.0.0`       | Semver range.                          |
 | Scoped handle           | `@anthropic/met.p.reviewer-voice`   | Cross-scope reference.                 |

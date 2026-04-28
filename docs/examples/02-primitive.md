@@ -39,7 +39,7 @@ the code does. If you are uncertain whether something is an issue, omit it.
 
 **`name: reviewer-voice`.** Primary identifier within this scope.
 
-**`metadata.pbib.handle: met.p.reviewer-voice`.** The `met.p.` prefix isn't mandatory — it's a convention some teams use to signal "this is a meta-domain primitive." The runtime determines kind from `kind:`, not the handle.
+**`metadata.pbib.handle: met.p.reviewer-voice`.** The `met.p.` prefix here is just one author's organizational choice — segments before the final one are how this author groups their components. The runtime determines kind from the `kind:` field, not from the handle.
 
 **`metadata.pbib.inputs:` with two entries.** `specialty` is a required string. `tone` is a `token_ref` that must resolve to a key in the `met.tone@^1.0.0` bundle, with a default of `terse`.
 

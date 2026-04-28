@@ -27,7 +27,7 @@ tags: [meta, style, tone]
 
 **`name: tone`.** The Agent Skills required field. Within this scope, just `tone` is enough.
 
-**`metadata.pbib.handle: met.tone`.** The optional structured handle places this on the domain axis. The domain is `met` (meta), which is where cross-cutting components live. Useful for cross-scope references.
+**`metadata.pbib.handle: met.tone`.** The optional structured handle gives this component cross-scope addressability. `met.tone` is one author's organizational choice — your library might use any structure (`tone`, `style.tone`, `acme.shared.tone`, etc.). The spec defines the grammar but not the meaning.
 
 **`metadata.pbib.kind: token_bundle`.** The kind tells the runtime: this has no body, no inputs, no slots. Just look for `values:`.
 

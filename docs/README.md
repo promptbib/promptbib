@@ -7,15 +7,15 @@ A file format and semantic model for LLM instruction artifacts — prompts, skil
 
 ## Terminology
 
-| Term             | Meaning                                                                                                                     |
-|------------------|-----------------------------------------------------------------------------------------------------------------------------|
-| **Component**    | A file conforming to this spec. Has front matter and optionally a body.                                                     |
-| **Front matter** | The YAML metadata block at the top of a component file, delimited by `---` markers. Machine-readable.                       |
-| **Body**         | The free-form text below the front matter. Becomes part of the prompt sent to the model. Human-readable.                    |
-| **Handle**       | An optional structured identifier placing a component on the domain axis (e.g., `cod.review.security`).                     |
-| **Kind**         | What type of component this is. One of `token_bundle`, `primitive`, `pattern`, `task`, `workflow`, `skin`, `skill`, `tool`. |
-| **Runtime**      | An implementation that parses, resolves, and renders components.                                                            |
-| **Registry**     | A distribution point for components — typically a git repository.                                                           |
+| Term | Meaning |
+|------|---------|
+| **Component** | A file conforming to this spec. Has front matter and optionally a body. |
+| **Front matter** | The YAML metadata block at the top of a component file, delimited by `---` markers. Machine-readable. |
+| **Body** | The free-form text below the front matter. Becomes part of the prompt sent to the model. Human-readable. |
+| **Handle** | An optional structured identifier for cross-scope addressability (e.g., `cod.review.security`). |
+| **Kind** | What type of component this is. One of `token_bundle`, `primitive`, `pattern`, `task`, `workflow`, `skin`, `skill`, `tool`. |
+| **Runtime** | An implementation that parses, resolves, and renders components. |
+| **Registry** | A distribution point for components — typically a git repository. |
 
 ## Goals
 
@@ -56,23 +56,23 @@ See [Part 1 §1.2](spec/01-format.md) for details.
 
 The spec is organized into four layers:
 
-| Layer                   | What it defines                                    | Part                             |
-|-------------------------|----------------------------------------------------|----------------------------------|
-| 1. File format          | How a single component is written on disk          | [Part 1](spec/01-format.md)      |
-| 2. Semantic model       | Component kinds and what each can do               | [Part 2](spec/02-kinds.md)       |
-| 3. Composition          | How components reference, extend, and combine      | [Part 3](spec/03-composition.md) |
-| 4. Trust and provenance | Versioning, compatibility, deprecation, provenance | [Part 4](spec/04-trust.md)       |
+| Layer | What it defines | Part |
+|-------|----------------|------|
+| 1. File format | How a single component is written on disk | [Part 1](spec/01-format.md) |
+| 2. Semantic model | Component kinds and what each can do | [Part 2](spec/02-kinds.md) |
+| 3. Composition | How components reference, extend, and combine | [Part 3](03-composition.md) |
+| 4. Trust and provenance | Versioning, compatibility, deprecation, provenance | [Part 4](04-trust.md) |
 
-[Part 5: Profiles](spec/05-profiles.md) defines conformance levels (core, agent) for runtimes.
+[Part 5: Profiles](05-profiles.md) defines conformance levels (core, agent) for runtimes.
 
 Worked examples are in [`examples/`](examples/).
 
 ## Reading order
 
-- **If you're evaluating whether to adopt:** README → [`examples/`](examples/) → [Part 5](spec/05-profiles.md).
-- **If you're authoring components:** [Part 1](spec/01-format.md) → [Part 2](spec/02-kinds.md) → [`examples/`](examples/) → [Part 3](spec/03-composition.md).
+- **If you're evaluating whether to adopt:** README → [`examples/`](examples/) → [Part 5](05-profiles.md).
+- **If you're authoring components:** [Part 1](spec/01-format.md) → [Part 2](spec/02-kinds.md) → [`examples/`](examples/) → [Part 3](03-composition.md).
 - **If you're implementing a runtime:** all five parts in order, plus [`examples/`](examples/) as test fixtures.
-- **If you're reviewing the design:** [Part 2](spec/02-kinds.md) and [Part 3](spec/03-composition.md) are where the load-bearing decisions live.
+- **If you're reviewing the design:** [Part 2](spec/02-kinds.md) and [Part 3](03-composition.md) are where the load-bearing decisions live.
 
 ## One-page summary
 
@@ -120,14 +120,30 @@ Same file. Works in Claude Code, Codex CLI, OpenCode at Level 0. Works in pbib-a
 
 ## Conformance
 
-A runtime MUST declare which profile it supports: `core` or `agent`. See [Part 5](spec/05-profiles.md).
+A runtime MUST declare which profile it supports: `core` or `agent`. See [Part 5](05-profiles.md).
 
 Where this spec uses the words **MUST**, **MUST NOT**, **SHOULD**, **SHOULD NOT**, and **MAY**, they are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119).
 
 ## Open questions
 
-- **Canonical domain table.** The three-letter domains in examples (`cod`, `mkt`, `met`) are illustrative. The actual table — which codes exist, who owns each, how new ones are added — is a registry-governance concern to be resolved before 1.0.
 - **Templating scope.** Whether a minimal template language (conditionals, loops) inside component bodies would pay for itself, or whether composition should remain purely structural.
 - **Provenance signing.** Which signing format(s) to standardize on for direct-distribution provenance — Sigstore, SSH signatures, minisign, or another.
 
 Feedback on these is especially welcome.
+
+## Document map
+
+```
+README.md              -- this file
+01-format.md           -- file format
+02-kinds.md            -- component kinds
+03-composition.md      -- composition rules
+04-trust.md            -- versioning, compatibility, provenance
+05-profiles.md         -- conformance profiles
+examples/
+  01-token.md          -- a token bundle
+  02-primitive.md      -- an instruction primitive
+  03-pattern.md        -- a reusable pattern with slots
+  04-task.md           -- a task extending a pattern
+  05-skill.md          -- a skill (agent-profile)
+```

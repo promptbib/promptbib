@@ -26,23 +26,17 @@ At **Level 0**, `kind` MAY be omitted. Runtimes infer from context:
 
 The five **core kinds** (`token_bundle`, `primitive`, `pattern`, `task`, `workflow`) are sufficient for static prompt libraries and applications. The three **agent-profile kinds** (`skin`, `skill`, `tool`) add capability required by coding agents. `skin` stays in the core column because skinning is useful everywhere.
 
-## 2.2 Role axis vs domain axis
+## 2.2 Role axis vs namespace axis
 
-Kind is the **role axis** — what this component *does*. The `handle` (when present) places the component on the **domain axis** — what it's *about* (code, marketing, compliance, etc.).
+Components organize along two independent axes:
 
-A valid component table is two-dimensional:
+**The role axis** — what this component *does*. This is the `kind` field (`primitive`, `pattern`, `task`, `workflow`, `skin`, `skill`, `tool`, `token_bundle`). The spec defines each kind's rules: what fields it requires, what it forbids, what its body can contain. Runtimes enforce these rules and reject components that violate them.
 
-```
-                 cod     qas     arc     mkt     met
-token_bundle     —       —       —       —       ✓
-primitive        ✓       ✓       ✓       ✓       ✓
-pattern          ✓       ✓       ✓       ✓       ✓
-task             ✓       ✓       ✓       ✓       —
-workflow         ✓       ✓       ✓       ✓       —
-skin             —       —       —       —       ✓
-```
+**The namespace axis** — how this component is organized within an author's library. This is the optional `handle` field. The spec defines only the grammar (lowercase kebab segments, dot-separated, see [Part 1 §1.6.3](01-format.md)). It does **not** define what segments mean, reserve any values, or maintain a "canonical" set of namespaces. Authors choose whatever structure fits their library.
 
-Dashes mark combinations that don't make sense. The spec does not enforce this table — that's a registry governance concern. But runtimes SHOULD warn when a component occupies a dashed cell.
+Examples throughout this spec use short labels like `cod`, `mkt`, `met` for terseness in writing — these have no special status. Your library might use `code`, `marketing`, `meta`, or `engineering.backend.review`, or any other structure. The spec takes no position.
+
+Some kind/namespace combinations are conceptually awkward — a workflow that's purely meta, a token bundle named for a business domain, a skin that's tied to one concrete task. Authors should avoid these as a matter of taste; registries may reject them as a matter of policy. But the spec itself takes no position because it has no opinion on what your namespaces mean.
 
 ## 2.3 The four reuse mechanisms
 
@@ -474,9 +468,3 @@ Three design rules that cut across kinds:
 **Prefer patterns with few slots over patterns with many.** Each slot is an extension point; each extension point is a source of variation. A pattern with eight slots is usually three patterns pretending to be one.
 
 **Start at the lowest level that meets your need.** If a plain SKILL.md works, don't add Level 1 metadata. If your skill doesn't need composition, don't add Level 2 features. Complexity creep is the most common failure mode of component systems.
-
-## 2.13 Open question: canonical domain table
-
-The three-letter domains used throughout the spec (`cod`, `mkt`, `met`) are illustrative. The actual canonical table — which codes exist, who owns each, how new ones are added — is a registry governance concern, not a spec concern.
-
-This is an open question for the spec community to resolve before 1.0. See [README](../README.md).
